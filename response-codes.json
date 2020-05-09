@@ -1,0 +1,17 @@
+{
+  "ERR_1": {
+    "success": false,
+    "status": 401,
+    "message": "user access token is expired"
+  },
+  "ERR_2": {
+    "success": false,
+    "status": 401,
+    "message": "user access token is invalid"
+  },
+  "ERR_3": {
+    "success": false,
+    "status": 401,
+    "message": "failed to verify exchange token"
+  }
+}

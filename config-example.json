@@ -1,0 +1,33 @@
+{
+  "server": {
+    "port": 3001,
+    "basePath": "/api/v1",
+    "debug": true
+  },
+  "client": {
+    "appSecret": "<APP_SECRET>",
+    "jwtSecret": "<JWT_SECRET>",
+    "sessionLifetime": "15m",
+    "sessionIdSecret": "<SESSION_SECRET>"
+  },
+  "dataSources": {
+    "movieDB": {
+      "lib": "sequelize",
+      "dialect": "<DATABASE_DRIVER>",
+      "username": "<USERNAME>",
+      "password": "<PASSWORD>",
+      "database": "<DATABASE_NAME>",
+      "storage": "<SQLITE_STORAGE>"
+    }
+  },
+  "components": {
+    "ResponseMapper": {
+      "filePath": "./response-codes.json"
+    },
+    "humanID": {
+      "baseUrl": "<HUMANID_BASE_URL",
+      "appId": "<APP_ID>",
+      "appSecret": "<APP_SECRET>"
+    }
+  }
+}
