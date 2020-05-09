@@ -7,7 +7,7 @@
   "client": {
     "appSecret": "<APP_SECRET>",
     "jwtSecret": "<JWT_SECRET>",
-    "sessionLifetime": "15m",
+    "jwtLifetime": "15m",
     "sessionIdSecret": "<SESSION_SECRET>"
   },
   "dataSources": {
