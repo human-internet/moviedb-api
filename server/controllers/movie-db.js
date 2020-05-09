@@ -131,21 +131,35 @@ class MovieDBController extends BaseController {
         }
     })
 
-    constructor({config, components, repositories, server, logger}) {
-        super({repositories, config, components, server})
+    handleLogIn = this.handleRESTAsync(async (req) => {
+        // Get request body
+        let body = req.body
 
-        // Set time
-        this.startTime = moment()
+        // Validate body
+        this.validate({exchangeToken: 'required'}, body)
 
-        // Create child logger
-        this.logger = logger.child({scope: 'MovieDB.API'})
+        // Verify Exchange Token
+        const userHash = await this.verifyExchangeToken(body.exchangeToken)
 
-        // Init router
-        this.router = express.Router()
+        // Get user, create if not exists
+        let users = await this.models.AppUser.findOrCreate({
+            where: {userHash: userHash},
+            defaults: {
+                extId: generateExtId(),
+                userHash: userHash,
+                fullName: _.startCase(dockerNames.getRandomName(false))
+            }
+        })
 
-        // Route
-        this.route()
-    }
+        // Create user session
+        const user = users[0]
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+
+        // Return response
+        return {
+            data: session
+        }
+    })
 
     route() {
         /**
@@ -327,6 +341,28 @@ class MovieDBController extends BaseController {
         return this.components.Common.hmac(raw, this.config.client.sessionIdSecret)
     }
 
+    constructor({config, components, models, server, logger}) {
+        super({models, config, components, server})
+
+        // Set time
+        this.startTime = moment()
+
+        // Create child logger
+        this.logger = logger.child({scope: 'MovieDB.API'})
+
+        // Init router
+        this.router = express.Router()
+
+        // Route
+        this.route()
+    }
+
+    /**
+     * @typedef {Object} UserSession
+     * @property {string} token User session JWT
+     * @property {number} expiredAt Expired At in Unix Epoch
+     */
+
     /**
      * @param {string} userId User PK
      * @param {string} userExtId User External ID
@@ -337,7 +373,7 @@ class MovieDBController extends BaseController {
         // Get jwt secret
         const {jwtSecret, jwtLifetime} = this.config.client
 
-        await this.repositories.AppUser.update({
+        await this.models.AppUser.update({
             lastLogIn: timestamp * 1000,
             updatedAt: timestamp * 1000
         }, {
@@ -363,55 +399,6 @@ class MovieDBController extends BaseController {
         return {
             token: jwtSession,
             expiredAt: expiredAt
-        }
-    }
-
-    /**
-     * @typedef {Object} UserSession
-     * @property {string} token User session JWT
-     * @property {number} expiredAt Expired At in Unix Epoch
-     */
-
-    /**
-     * Validate user session
-     *
-     * @param userAccessToken User JWT Access Token
-     * @returns {Promise<{id: string, extId: string}>} User Session Payload
-     */
-    async validateUserSession(userAccessToken) {
-        // Verify and extract payload from jwt
-        const payload = await this.verifyJWT(userAccessToken)
-
-        // Get user
-        let user = await this.repositories.AppUser.findOne({
-            where: {extId: payload.data.userId},
-        })
-
-        // If user not found, throw error
-        if (!user) {
-            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
-        }
-
-        // Get last log in millis in UTC
-        let lastLogIn;
-        if (!user.lastLogIn) {
-            lastLogIn = -1
-        } else {
-            lastLogIn = getUnixTime(user.lastLogIn)
-        }
-
-        // Generate session identifier
-        const currentSessionId = this.createSessionId(user.extId, lastLogIn)
-
-        // If current session id is different with payload, throw error
-        if (currentSessionId !== payload.data.sessionId) {
-            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
-        }
-
-        // Return user payload
-        return {
-            id: user.id,
-            extId: user.extId
         }
     }
 
@@ -488,35 +475,48 @@ class MovieDBController extends BaseController {
         return respBody.data.userHash
     }
 
-    handleLogIn = this.handleRESTAsync(async (req) => {
-        // Get request body
-        let body = req.body
+    /**
+     * Validate user session
+     *
+     * @param userAccessToken User JWT Access Token
+     * @returns {Promise<{id: string, extId: string}>} User Session Payload
+     */
+    async validateUserSession(userAccessToken) {
+        // Verify and extract payload from jwt
+        const payload = await this.verifyJWT(userAccessToken)
 
-        // Validate body
-        this.validate({exchangeToken: 'required'}, body)
-
-        // Verify Exchange Token
-        const userHash = await this.verifyExchangeToken(body.exchangeToken)
-
-        // Get user, create if not exists
-        let users = await this.repositories.AppUser.findOrCreate({
-            where: {userHash: userHash},
-            defaults: {
-                extId: generateExtId(),
-                userHash: userHash,
-                fullName: _.startCase(dockerNames.getRandomName(false))
-            }
+        // Get user
+        let user = await this.models.AppUser.findOne({
+            where: {extId: payload.data.userId},
         })
 
-        // Create user session
-        const user = users[0]
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
-
-        // Return response
-        return {
-            data: session
+        // If user not found, throw error
+        if (!user) {
+            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
         }
-    })
+
+        // Get last log in millis in UTC
+        let lastLogIn;
+        if (!user.lastLogIn) {
+            lastLogIn = -1
+        } else {
+            lastLogIn = getUnixTime(user.lastLogIn)
+        }
+
+        // Generate session identifier
+        const currentSessionId = this.createSessionId(user.extId, lastLogIn)
+
+        // If current session id is different with payload, throw error
+        if (currentSessionId !== payload.data.sessionId) {
+            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
+        }
+
+        // Return user payload
+        return {
+            id: user.id,
+            extId: user.extId
+        }
+    }
 }
 
 function generateExtId() {
