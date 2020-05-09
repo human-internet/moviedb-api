@@ -45,121 +45,21 @@ const
     Constants = require('../constants')
 
 class MovieDBController extends BaseController {
-    /**
-     * Handler chain function to validate user session
-     * @type {function(...[*]=)}
-     */
-    handleValidateUserSession = this.handleAsync(async (req, res, next) => {
-        // Get access token
-        const userAccessToken = req.header("userAccessToken")
+    constructor({config, components, models, server, logger}) {
+        super({models, config, components, server})
 
-        // Validate session
-        req.userAccess = await this.validateUserSession(userAccessToken)
+        // Set time
+        this.startTime = moment()
 
-        // Continue
-        next()
-    })
-    handleGetAPIStatus = this.handleREST(() => {
-        return {
-            data: {
-                name: AppManifest.AppName,
-                version: AppManifest.AppVersion,
-                uptime: this.startTime.fromNow()
-            }
-        }
-    })
-    handleGetProfile = this.handleRESTAsync(async (req) => {
-        // Get user info
-        const {userAccess: user} = req
+        // Create child logger
+        this.logger = logger.child({scope: 'MovieDB.API'})
 
-        const u = await this.models.AppUser.findByPk(user.id)
+        // Init router
+        this.router = express.Router()
 
-        return {
-            data: {
-                id: u.extId,
-                fullName: u.fullName,
-                updatedAt: getUnixTime(u.updatedAt)
-            }
-        }
-    })
-    handleLogOut = this.handleRESTAsync(async req => {
-        // Get session token
-        const userAccessToken = req.header("userAccessToken")
-
-        // Try validate session
-        let session
-        try {
-            session = await this.validateUserSession(userAccessToken)
-        } catch (e) {
-            this.logger.error(`failed to validate user session. Error=${e.message}`)
-            return
-        }
-
-        // Invalidate session
-        const result = await this.models.AppUser.update({
-            lastLogIn: null,
-            updatedAt: new Date()
-        }, {
-            where: {id: session.id}
-        })
-
-        this.logger.debug(`Result=${result}`)
-    })
-    handleUpdateProfile = this.handleRESTAsync(async req => {
-        // Get user info
-        const {userAccess: user} = req
-
-        // Get request body
-        const body = req.body
-
-        // Update user name
-        await this.models.AppUser.update({
-            fullName: body.fullName
-        }, {
-            where: {id: user.id}
-        })
-    })
-    handleRefreshSession = this.handleRESTAsync(async req => {
-        // Get user info
-        const {userAccess: user} = req
-
-        // Create new session
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
-
-        return {
-            data: session
-        }
-    })
-
-    handleLogIn = this.handleRESTAsync(async (req) => {
-        // Get request body
-        let body = req.body
-
-        // Validate body
-        this.validate({exchangeToken: 'required'}, body)
-
-        // Verify Exchange Token
-        const userHash = await this.verifyExchangeToken(body.exchangeToken)
-
-        // Get user, create if not exists
-        let users = await this.models.AppUser.findOrCreate({
-            where: {userHash: userHash},
-            defaults: {
-                extId: generateExtId(),
-                userHash: userHash,
-                fullName: _.startCase(dockerNames.getRandomName(false))
-            }
-        })
-
-        // Create user session
-        const user = users[0]
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
-
-        // Return response
-        return {
-            data: session
-        }
-    })
+        // Route
+        this.route()
+    }
 
     route() {
         /**
@@ -313,6 +213,127 @@ class MovieDBController extends BaseController {
     }
 
     /**
+     * Handler chain function to validate user session
+     * @type {function(...[*]=)}
+     */
+    handleValidateUserSession = this.handleAsync(async (req, res, next) => {
+        // Get access token
+        const userAccessToken = req.header("userAccessToken")
+
+        // Validate session
+        req.userAccess = await this.validateUserSession(userAccessToken)
+
+        // Continue
+        next()
+    })
+
+    handleGetAPIStatus = this.handleREST(() => {
+        return {
+            data: {
+                name: AppManifest.AppName,
+                version: AppManifest.AppVersion,
+                uptime: this.startTime.fromNow()
+            }
+        }
+    })
+
+    handleGetProfile = this.handleRESTAsync(async (req) => {
+        // Get user info
+        const {userAccess: user} = req
+
+        const u = await this.models.AppUser.findByPk(user.id)
+
+        return {
+            data: {
+                id: u.extId,
+                fullName: u.fullName,
+                updatedAt: getUnixTime(u.updatedAt)
+            }
+        }
+    })
+
+    handleLogOut = this.handleRESTAsync(async req => {
+        // Get session token
+        const userAccessToken = req.header("userAccessToken")
+
+        // Try validate session
+        let session
+        try {
+            session = await this.validateUserSession(userAccessToken)
+        } catch (e) {
+            this.logger.error(`failed to validate user session. Error=${e.message}`)
+            return
+        }
+
+        // Invalidate session
+        const result = await this.models.AppUser.update({
+            lastLogIn: null,
+            updatedAt: new Date()
+        }, {
+            where: {id: session.id}
+        })
+
+        this.logger.debug(`Result=${result}`)
+    })
+
+    handleUpdateProfile = this.handleRESTAsync(async req => {
+        // Get user info
+        const {userAccess: user} = req
+
+        // Get request body
+        const body = req.body
+
+        // Update user name
+        await this.models.AppUser.update({
+            fullName: body.fullName
+        }, {
+            where: {id: user.id}
+        })
+    })
+
+    handleRefreshSession = this.handleRESTAsync(async req => {
+        // Get user info
+        const {userAccess: user} = req
+
+        // Create new session
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+
+        return {
+            data: session
+        }
+    })
+
+    handleLogIn = this.handleRESTAsync(async (req) => {
+        // Get request body
+        let body = req.body
+
+        // Validate body
+        this.validate({exchangeToken: 'required'}, body)
+
+        // Verify Exchange Token
+        const userHash = await this.verifyExchangeToken(body.exchangeToken)
+
+        // Get user, create if not exists
+        let users = await this.models.AppUser.findOrCreate({
+            where: {userHash: userHash},
+            defaults: {
+                extId: generateExtId(),
+                userHash: userHash,
+                fullName: _.startCase(dockerNames.getRandomName(false))
+            }
+        })
+
+        // Create user session
+        const user = users[0]
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+
+        // Return response
+        return {
+            data: session
+        }
+    })
+
+    /**
      * Handler chain function to validate app as client
      * @type {function(...[*]=)}
      */
@@ -339,22 +360,6 @@ class MovieDBController extends BaseController {
     createSessionId(userExtId, lastLogInMillis) {
         const raw = `${userExtId}-${lastLogInMillis}`
         return this.components.Common.hmac(raw, this.config.client.sessionIdSecret)
-    }
-
-    constructor({config, components, models, server, logger}) {
-        super({models, config, components, server})
-
-        // Set time
-        this.startTime = moment()
-
-        // Create child logger
-        this.logger = logger.child({scope: 'MovieDB.API'})
-
-        // Init router
-        this.router = express.Router()
-
-        // Route
-        this.route()
     }
 
     /**
