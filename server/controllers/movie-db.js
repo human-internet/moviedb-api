@@ -163,7 +163,7 @@ class MovieDBController extends BaseController {
 
     route() {
         /**
-         * @api {get} Get API Status
+         * @api {get} / Get API Status
          * @apiName GetAPIStatus
          * @apiGroup Common
          * @apiDescription Get API uptime status and version info
