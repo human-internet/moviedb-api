@@ -72,7 +72,7 @@ class MovieDBController extends BaseController {
         // Get user info
         const {userAccess: user} = req
 
-        const u = await this.repositories.AppUser.findByPk(user.id)
+        const u = await this.models.AppUser.findByPk(user.id)
 
         return {
             data: {
@@ -96,7 +96,7 @@ class MovieDBController extends BaseController {
         }
 
         // Invalidate session
-        const result = await this.repositories.AppUser.update({
+        const result = await this.models.AppUser.update({
             lastLogIn: null,
             updatedAt: new Date()
         }, {
@@ -113,7 +113,7 @@ class MovieDBController extends BaseController {
         const body = req.body
 
         // Update user name
-        await this.repositories.AppUser.update({
+        await this.models.AppUser.update({
             fullName: body.fullName
         }, {
             where: {id: user.id}

@@ -1,7 +1,7 @@
 /**
  * @typedef {Object} ServerOpts
  * @property {string} configFile Config file path
- * @property {Array.<string, *>} repositories Repositories
+ * @property {Array.<string, *>} models models
  * @property {Array.<string, *>} components Components
  */
 
@@ -26,7 +26,7 @@ class Server {
         this.logger = logger
 
         // Get parameters
-        const {configFile, repositories: repositoryOpts, components: componentOpts} = opt
+        const {configFile, models: modelOpts, components: componentOpts} = opt
 
         // Load config
         this.config = Config.load(configFile)
@@ -37,8 +37,8 @@ class Server {
         // Load data sources
         this.initDataSources()
 
-        // Load repositories
-        this.initRepositories(this.config.server.pwd + '/server/repositories', repositoryOpts)
+        // Load models
+        this.initModels(this.config.server.pwd + '/server/models', modelOpts)
 
         // Initiate routing
         this.initRouting()
@@ -79,17 +79,17 @@ class Server {
 
 
     /**
-     * Initialize repositories
+     * Initialize models
      *
      * @param modelsDir
      * @param opt
      */
-    initRepositories(modelsDir, opt) {
+    initModels(modelsDir, opt) {
         // Get data sources
         const {dataSources} = this
 
         // Init models
-        const repositories = {}
+        const models = {}
 
         // Filter models list
         Object.keys(opt).forEach(name => {
@@ -110,18 +110,18 @@ class Server {
             }
 
             // Load model
-            repositories[name] = ds.initRepository(filePath)
-            this.logger.debug(`Repository added: ${name}`, {scope: 'Server'})
+            models[name] = ds.initModel(filePath)
+            this.logger.debug(`Model added: ${name}`, {scope: 'Server'})
         })
 
         // Associates models
-        Object.keys(repositories).forEach(modelName => {
-            if (repositories[modelName].associate) {
-                repositories[modelName].associate(repositories)
+        Object.keys(models).forEach(modelName => {
+            if (models[modelName].associate) {
+                models[modelName].associate(models)
             }
         })
 
-        this.repositories = repositories
+        this.models = models
     }
 
 
@@ -186,7 +186,7 @@ class Server {
      * Initialize routing
      */
     initRouting() {
-        const {repositories, components, config} = this
+        const {models, components, config} = this
 
         // Configure router
         const router = express()
@@ -201,7 +201,7 @@ class Server {
             logger,
             components,
             config,
-            repositories,
+            models,
             server: {
                 handleAsync: this.handleAsync,
                 handleREST: this.handleREST,

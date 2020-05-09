@@ -24,7 +24,7 @@ class SequelizeDataSource {
         this.conn = new Sequelize(this.config.database, this.config.username, this.config.password, this.config)
     }
 
-    initRepository(modelFilePath) {
+    initModel(modelFilePath) {
         // Initiate model
         return this.conn.import(modelFilePath)
     }

@@ -5,8 +5,8 @@ const
     Constants = require('../constants')
 
 class BaseController {
-    constructor({repositories, config, components, server}) {
-        this.repositories = repositories
+    constructor({models, config, components, server}) {
+        this.models = models
         this.config = config
         this.components = components
         this.handleAsync = server.handleAsync

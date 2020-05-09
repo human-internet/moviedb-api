@@ -7,7 +7,7 @@ function main() {
     // Init server
     const server = new Server({
         configFile: 'config.json',
-        repositories: {
+        models: {
             AppUser: 'movieDB'
         },
         components: {
