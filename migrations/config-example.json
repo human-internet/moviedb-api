@@ -1,0 +1,8 @@
+{
+  "db": {
+    "dialect": "<DATABASE_DRIVER>",
+    "username": "<USERNAME>",
+    "password": "<PASSWORD>",
+    "database": "<DATABASE_NAME>"
+  }
+}
