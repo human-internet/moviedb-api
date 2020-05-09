@@ -1,0 +1,19 @@
+# IDEs Dirs
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+
+# Configurations
+config.json
+serviceAccountKey.json
+
+# Generated files
+*.log
+*.sqlite
+docs/apidoc/
+
+# Temporary dir and files
+.tmp/
+tmp/
