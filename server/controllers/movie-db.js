@@ -335,9 +335,9 @@ class MovieDBController extends BaseController {
          * @apiGroup User
          * @apiDescription LogIn to 3rd party app using humanId Exchange Token
          *
-         * @apiHeader {String} clientSecret Client credentials to access Api
+         * @apiHeader (Request Header) {String} clientSecret Client credentials to access Api
          *
-         * @apiParam {String} exchangeToken An exchange token that states user has been verified by humanId
+         * @apiParam (Request Body - application/json) {String} exchangeToken An exchange token that states user has been verified by humanId
          *
          * @apiUse SuccessResponse
          * @apiSuccess {Object} data Response data
@@ -365,7 +365,7 @@ class MovieDBController extends BaseController {
          * @apiGroup User
          * @apiDescription Get user profile by user access token
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
          * @apiUse SuccessResponse
          * @apiSuccess {Object} data Response data
@@ -395,7 +395,7 @@ class MovieDBController extends BaseController {
          * @apiGroup User
          * @apiDescription Refresh user session
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
          * @apiUse SuccessResponse
          * @apiSuccess {Object} data Response data
@@ -423,9 +423,9 @@ class MovieDBController extends BaseController {
          * @apiGroup User
          * @apiDescription Update user profile by user access token
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
-         * @apiParam {String} fullName Update full name
+         * @apiParam (Request Body - application/json) {String} fullName Update full name
          *
          * @apiUse SuccessResponse
          *
@@ -441,7 +441,7 @@ class MovieDBController extends BaseController {
          * @apiGroup User
          * @apiDescription Log out of App
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
          * @apiUse SuccessResponse
          *
@@ -452,16 +452,16 @@ class MovieDBController extends BaseController {
         this.router.put('/users/log-out', this.handleLogOut)
 
         /**
-         * @api {post} /movies/rating Post Movie Rating
-         * @apiName PostUserMovieRoting
+         * @api {post} /movies/:movieId/rating Post Movie Rating
+         * @apiName PostUserMovieRating
          * @apiGroup Movie
          * @apiDescription Post movie rating by User.
          * Updates movie ratings if User already post a rating
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
-         * @apiParam {string} movieId Movie identifier from TMDb API
-         * @apiParam {number} rating User rating integer
+         * @apiParam (Path Variables) {string} movieId Movies identifier from TMDb API
+         * @apiParam (Request Body - application/json) {number} rating User rating integer
          *
          * @apiUse SuccessResponse
          * @apiSuccess {Object} data Result data
@@ -491,9 +491,9 @@ class MovieDBController extends BaseController {
          * @apiGroup Movie
          * @apiDescription Get average ratings for a Movie
          *
-         * @apiHeader {String} userAccessToken User Access Token
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
          *
-         * @apiParam (Path) {string} movieId Movie identifier from TMDb API
+         * @apiParam (Path Variables) {string} movieId Movie identifier from TMDb API
          *
          * @apiUse SuccessResponse
          * @apiSuccess {Object} data Result data
