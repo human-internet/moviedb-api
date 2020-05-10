@@ -13,5 +13,15 @@
     "success": false,
     "status": 401,
     "message": "failed to verify exchange token"
+  },
+  "ERR_4": {
+    "success": false,
+    "status": 400,
+    "message": "movie rating has been updated, please retry"
+  },
+  "ERR_5": {
+    "success": false,
+    "status": 400,
+    "message": "rating input must be between 1 and 5"
   }
 }
