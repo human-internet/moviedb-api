@@ -8,7 +8,9 @@
     "dev": "nodemon index.js",
     "doc": "apidoc -i server/controllers/ -o docs/apidoc/",
     "db:reset": "NODE_ENV=db npx sequelize db:drop; NODE_ENV=db sequelize db:create; NODE_ENV=db npx sequelize db:migrate; NODE_ENV=db npx sequelize db:seed:all",
-    "db:migrate": "NODE_ENV=db npx sequelize db:migrate"
+    "db:migrate": "NODE_ENV=db npx sequelize db:migrate",
+    "db:undo": "NODE_ENV=db npx sequelize db:migrate:undo",
+    "db:status": "NODE_ENV=db npx sequelize db:migrate:status"
   },
   "keywords": [
     "human",
