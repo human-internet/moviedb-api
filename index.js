@@ -8,7 +8,9 @@ function main() {
     const server = new Server({
         configFile: 'config.json',
         models: {
-            AppUser: 'movieDB'
+            AppUser: 'movieDB',
+            MovieRating: 'movieDB',
+            UserMovieRating: 'movieDB'
         },
         components: {
             Common: true,
