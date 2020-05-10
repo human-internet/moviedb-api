@@ -45,7 +45,9 @@
 
 const
     fs = require('fs'),
-    path = require('path')
+    path = require('path'),
+    logger = require('./logger'),
+    _ = require('lodash')
 
 // Init module
 const config = {}
@@ -69,8 +71,18 @@ config.load = (configFile) => {
     const configPath = path.join(pwd, configFile)
 
     // If file not exist, throw error
+    let config
     if (!fs.existsSync(configPath)) {
-        throw new Error(`server: config file not found. Path=${configPath}`)
+        logger.warn(`config file not found. Path=${configPath}`, {
+            scope: 'Server.Configuration'
+        })
+        config = {}
+    } else {
+        // Read file sync
+        const content = fs.readFileSync(configFile, 'utf8')
+
+        // Parse json
+        config = JSON.parse(content.toString())
     }
 
     // Load config
