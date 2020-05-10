@@ -486,7 +486,7 @@ class MovieDBController extends BaseController {
         this.router.post('/movies/:movieId/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
 
         /**
-         * @api {post} /movies/:movieId/rating Get Movie Rating
+         * @api {get} /movies/:movieId/rating Get Movie Rating
          * @apiName GetMovieRating
          * @apiGroup Movie
          * @apiDescription Get average ratings for a Movie
