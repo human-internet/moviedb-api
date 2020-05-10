@@ -65,6 +65,9 @@ class MovieDBController extends BaseController {
         // Get body
         const {body} = req
 
+        // Set movieId from path parameter
+        body.movieId = req.params.movieId
+
         // Validate body
         this.validate({
             movieId: 'required'
@@ -480,7 +483,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.post('/movies/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
+        this.router.post('/movies/:movieId/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
 
         /**
          * @api {post} /movies/:movieId/rating Get Movie Rating
