@@ -377,6 +377,84 @@ class MovieDBController extends BaseController {
         })
     })
 
+    handleListUserMovieComments = this.handleRESTAsync(async req => {
+        // Get parameters
+        let {movieId} = req.params
+        let {skip = '0', limit = '10', sortBy = 'latest'} = req.query
+
+        // Convert to number
+        skip = parseInt(skip, 10)
+        if (!_.isFinite(skip)) {
+            skip = 0
+        }
+
+        limit = parseInt(limit, 10)
+        if (!_.isFinite(limit)) {
+            limit = 10
+        }
+
+        // Get Movie Comment metadata
+        const movieMeta = await this.models.MovieComment.findOne({
+            where: {movieId}
+        })
+
+        // If movie meta is not available, return
+        if (!movieMeta) {
+            return {
+                data: {
+                    comments: [],
+                    _metadata: {skip, limit, sortBy, commentsCount: 0, uniqueUserCount: 0}
+                }
+            }
+        }
+
+        // Prepare sort by
+        let orderOpt
+        switch (sortBy) {
+            case 'earliest': {
+                orderOpt = [['version', 'ASC']]
+                break
+            }
+            default:
+                sortBy = 'latest'
+                orderOpt = [['version', 'DESC']]
+        }
+
+        // Get comments
+        const comments = await this.models.UserMovieComment.findAll({
+            where: {movieId},
+            limit: limit,
+            offset: skip,
+            order: orderOpt,
+            include: ['user']
+        })
+
+        // Compose response
+        const commentsResp = comments.map(item => {
+            return {
+                id: item.id,
+                userId: item.user.extId,
+                userName: item.user.fullName,
+                comment: item.comment,
+                version: item.version,
+                updatedAt: getUnixTime(item.updatedAt)
+            }
+        })
+
+        const metaResp = {
+            skip, limit, sortBy,
+            commentsCount: movieMeta.commentsCount,
+            uniqueUserCount: movieMeta.uniqueUser,
+        }
+
+        return {
+            data: {
+                comments: commentsResp,
+                _metadata: metaResp
+            }
+        }
+    })
+
     route() {
         /**
          * @api {get} / Get API Status
@@ -611,6 +689,98 @@ class MovieDBController extends BaseController {
          * @apiUse ErrorResponse
          */
         this.router.post('/movies/:movieId/comment', this.handleValidateUserSession, this.handlePostUserMovieComment)
+
+        /**
+         * @api {get} /movies/:movieId/comments List User Movie Comments
+         * @apiName ListUserMovieComments
+         * @apiGroup Movie
+         * @apiDescription List comments to a movie by user
+         *
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
+         *
+         * @apiParam (Path Variables) {string} movieId Movie identifier from TMDb API
+         *
+         * @apiParam (Request Query) {number} skip Skip number of result. Also known as offset. Default: 0
+         * @apiParam (Request Query) {number} limit Limit number of result. Default: 10
+         * @apiParam (Request Query) {string} sortBy Sort result option. Available Values: earliest, latest (default)
+         *
+         * @apiUse SuccessResponse
+         * @apiSuccess {Object} data Result data
+         * @apiSuccess {Object[]} data.comments List of user comments
+         * @apiSuccess {number} data.comments List of user comments
+         * @apiSuccess {number} data.comments.id Comment Id
+         * @apiSuccess {string} data.comments.userId User external Id
+         * @apiSuccess {string} data.comments.comment User comment
+         * @apiSuccess {number} data.comments.version Data version
+         * @apiSuccess {number} data.comments.updatedAt Update timestamp in Unix Epoch
+         * @apiSuccess {Object} data._metadata Search result metadata
+         * @apiSuccess {number} data._metadata.skip Skip number of result
+         * @apiSuccess {number} data._metadata.limit Limit number of result
+         * @apiSuccess {string} data._metadata.sortBy Sort result option
+         * @apiSuccess {number} data._metadata.commentsCount Total comments count
+         * @apiSuccess {number} data._metadata.uniqueUserCount Unique user count
+         *
+         * @apiSuccessExample {json} SuccessResponse
+         *     {
+         *         "success": true,
+         *         "code": "OK",
+         *         "message": "Success",
+         *         "data": {
+         *             "comments": [
+         *                 {
+         *                     "id": 5,
+         *                     "userId": "1589045274",
+         *                     "userName": "Optimistic Benz",
+         *                     "comment": "test",
+         *                     "version": 6,
+         *                     "updatedAt": 1589089195
+         *                 },
+         *                 {
+         *                     "id": 4,
+         *                     "userId": "1589045704",
+         *                     "userName": "Mystifying Shockley",
+         *                     "comment": "test",
+         *                     "version": 5,
+         *                     "updatedAt": 1589088060
+         *                 },
+         *                 {
+         *                     "id": 3,
+         *                     "userId": "1589045704",
+         *                     "userName": "Mystifying Shockley",
+         *                     "comment": "test",
+         *                     "version": 4,
+         *                     "updatedAt": 1589085810
+         *                 },
+         *                 {
+         *                     "id": 2,
+         *                     "userId": "1589045704",
+         *                     "userName": "Mystifying Shockley",
+         *                     "comment": "good movie",
+         *                     "version": 3,
+         *                     "updatedAt": 1589085771
+         *                 },
+         *                 {
+         *                     "id": 1,
+         *                     "userId": "1589045704",
+         *                     "userName": "Mystifying Shockley",
+         *                     "comment": "good movie",
+         *                     "version": 2,
+         *                     "updatedAt": 1589085738
+         *                 }
+         *             ],
+         *             "_metadata": {
+         *                 "skip": 0,
+         *                 "limit": 10,
+         *                 "sortBy": "latest",
+         *                 "commentsCount": 5,
+         *                 "uniqueUserCount": 2
+         *             }
+         *         }
+         *     }
+         *
+         * @apiUse ErrorResponse
+         */
+        this.router.get('/movies/:movieId/comments', this.handleValidateUserSession, this.handleListUserMovieComments)
     }
 
     /**
