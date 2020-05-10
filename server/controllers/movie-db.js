@@ -61,6 +61,216 @@ class MovieDBController extends BaseController {
         this.route()
     }
 
+    handlePostUserMovieRating = this.handleRESTAsync(async req => {
+        // Get body
+        const {body} = req
+
+        // Validate body
+        this.validate({
+            movieId: 'required'
+        }, body)
+
+        // Get parameters
+        const {movieId, rating} = body
+        const userId = req.userAccess.id
+
+        // Check rating value
+        if (!_.isNumber(rating) || (rating < 1 || rating > 5)) {
+            throw new APIError('ERR_5')
+        }
+
+        // Get models
+        const {MovieRating: MovieRatingModel, UserMovieRating: UserMovieRatingModel} = this.models
+
+        // Get current movie rating, if not exist create a new one
+        const movieRatings = await MovieRatingModel.findOrCreate({
+            where: {movieId},
+            defaults: {
+                movieId
+            }
+        })
+
+        // Get movie rating instance
+        const movieRating = movieRatings[0]
+
+        // If user has not yet rate, then increment ratingCount
+        const userRating = await UserMovieRatingModel.findOne({
+            where: {movieId, userId}
+        })
+
+        // Get rating count and sum
+        let {ratingCount} = movieRating
+        let sumRating = movieRating.ratingCount * movieRating.avgRating
+
+        // Determine average rating
+        let avgRating, id
+        if (userRating) {
+            // If user rating already available, recalculate average
+            let diffRating = rating - userRating.rating
+            avgRating = (sumRating + diffRating) / ratingCount
+            id = userRating.id
+        } else {
+            // Else, new user rating, add rating and increment count
+            ratingCount++
+            avgRating = (sumRating + rating) / ratingCount
+        }
+
+        // Increment version
+        const version = movieRating.version + 1
+
+        // Persist user rating and movie rating average
+        const data = await MovieRatingModel.sequelize.transaction(async tx => {
+            // Upsert user rating
+            await UserMovieRatingModel.upsert({
+                id, movieId, userId, rating, version
+            }, {transaction: tx})
+
+            // Update movie
+            const result = await MovieRatingModel.update({
+                avgRating, ratingCount, version
+            }, {
+                where: {
+                    id: movieRating.id,
+                    version: movieRating.version
+                },
+                transaction: tx
+            })
+
+            // If no update affected, then throw error
+            if (result[0] === 0) {
+                throw new APIError('ERR_4')
+            }
+
+            // Return average rating
+            return Promise.resolve({
+                avgRating, ratingCount, version
+            })
+        })
+
+        return {data}
+    })
+
+    /**
+     * Handler chain function to validate user session
+     * @type {function(...[*]=)}
+     */
+    handleValidateUserSession = this.handleAsync(async (req, res, next) => {
+        // Get access token
+        const userAccessToken = req.header("userAccessToken")
+
+        // Validate session
+        req.userAccess = await this.validateUserSession(userAccessToken)
+
+        // Continue
+        next()
+    })
+
+    handleGetAPIStatus = this.handleREST(() => {
+        return {
+            data: {
+                name: AppManifest.AppName,
+                version: AppManifest.AppVersion,
+                uptime: this.startTime.fromNow()
+            }
+        }
+    })
+
+    handleGetProfile = this.handleRESTAsync(async (req) => {
+        // Get user info
+        const {userAccess: user} = req
+
+        const u = await this.models.AppUser.findByPk(user.id)
+
+        return {
+            data: {
+                id: u.extId,
+                fullName: u.fullName,
+                updatedAt: getUnixTime(u.updatedAt)
+            }
+        }
+    })
+
+    handleLogOut = this.handleRESTAsync(async req => {
+        // Get session token
+        const userAccessToken = req.header("userAccessToken")
+
+        // Try validate session
+        let session
+        try {
+            session = await this.validateUserSession(userAccessToken)
+        } catch (e) {
+            this.logger.error(`failed to validate user session. Error=${e.message}`)
+            return
+        }
+
+        // Invalidate session
+        const result = await this.models.AppUser.update({
+            lastLogIn: null,
+            updatedAt: new Date()
+        }, {
+            where: {id: session.id}
+        })
+
+        this.logger.debug(`Result=${result}`)
+    })
+
+    handleUpdateProfile = this.handleRESTAsync(async req => {
+        // Get user info
+        const {userAccess: user} = req
+
+        // Get request body
+        const body = req.body
+
+        // Update user name
+        await this.models.AppUser.update({
+            fullName: body.fullName
+        }, {
+            where: {id: user.id}
+        })
+    })
+
+    handleRefreshSession = this.handleRESTAsync(async req => {
+        // Get user info
+        const {userAccess: user} = req
+
+        // Create new session
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+
+        return {
+            data: session
+        }
+    })
+
+    handleLogIn = this.handleRESTAsync(async (req) => {
+        // Get request body
+        let body = req.body
+
+        // Validate body
+        this.validate({exchangeToken: 'required'}, body)
+
+        // Verify Exchange Token
+        const userHash = await this.verifyExchangeToken(body.exchangeToken)
+
+        // Get user, create if not exists
+        let users = await this.models.AppUser.findOrCreate({
+            where: {userHash: userHash},
+            defaults: {
+                extId: generateExtId(),
+                userHash: userHash,
+                fullName: _.startCase(dockerNames.getRandomName(false))
+            }
+        })
+
+        // Create user session
+        const user = users[0]
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+
+        // Return response
+        return {
+            data: session
+        }
+    })
+
     route() {
         /**
          * @api {get} / Get API Status
@@ -210,128 +420,41 @@ class MovieDBController extends BaseController {
          * @apiUse ErrorResponse
          */
         this.router.put('/users/log-out', this.handleLogOut)
+
+        /**
+         * @api {post} /movies/rating Post Movie Rating
+         * @apiName PostUserMovieRoting
+         * @apiGroup Movie
+         * @apiDescription Post movie rating by User.
+         * Updates movie ratings if User already post a rating
+         *
+         * @apiHeader {String} userAccessToken User Access Token
+         *
+         * @apiParam {string} movieId Movie identifier from TMDb API
+         * @apiParam {number} rating User rating integer
+         *
+         * @apiUse SuccessResponse
+         * @apiSuccess {Object} data Result data
+         * @apiSuccess {number} data.avgRating Updated movie average rating
+         * @apiSuccess {number} data.ratingCount Updated total user rating count
+         * @apiSuccess {number} data.version Data version
+         *
+         * @apiSuccessExample {json} SuccessResponse
+         *     {
+         *         "success": true,
+         *         "code": "OK",
+         *         "message": "Success",
+         *         "data": {
+         *             "avgRating": 4.5,
+         *             "ratingCount": 2,
+         *             "version": 20
+         *         }
+         *     }
+         *
+         * @apiUse ErrorResponse
+         */
+        this.router.post('/movies/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
     }
-
-    /**
-     * Handler chain function to validate user session
-     * @type {function(...[*]=)}
-     */
-    handleValidateUserSession = this.handleAsync(async (req, res, next) => {
-        // Get access token
-        const userAccessToken = req.header("userAccessToken")
-
-        // Validate session
-        req.userAccess = await this.validateUserSession(userAccessToken)
-
-        // Continue
-        next()
-    })
-
-    handleGetAPIStatus = this.handleREST(() => {
-        return {
-            data: {
-                name: AppManifest.AppName,
-                version: AppManifest.AppVersion,
-                uptime: this.startTime.fromNow()
-            }
-        }
-    })
-
-    handleGetProfile = this.handleRESTAsync(async (req) => {
-        // Get user info
-        const {userAccess: user} = req
-
-        const u = await this.models.AppUser.findByPk(user.id)
-
-        return {
-            data: {
-                id: u.extId,
-                fullName: u.fullName,
-                updatedAt: getUnixTime(u.updatedAt)
-            }
-        }
-    })
-
-    handleLogOut = this.handleRESTAsync(async req => {
-        // Get session token
-        const userAccessToken = req.header("userAccessToken")
-
-        // Try validate session
-        let session
-        try {
-            session = await this.validateUserSession(userAccessToken)
-        } catch (e) {
-            this.logger.error(`failed to validate user session. Error=${e.message}`)
-            return
-        }
-
-        // Invalidate session
-        const result = await this.models.AppUser.update({
-            lastLogIn: null,
-            updatedAt: new Date()
-        }, {
-            where: {id: session.id}
-        })
-
-        this.logger.debug(`Result=${result}`)
-    })
-
-    handleUpdateProfile = this.handleRESTAsync(async req => {
-        // Get user info
-        const {userAccess: user} = req
-
-        // Get request body
-        const body = req.body
-
-        // Update user name
-        await this.models.AppUser.update({
-            fullName: body.fullName
-        }, {
-            where: {id: user.id}
-        })
-    })
-
-    handleRefreshSession = this.handleRESTAsync(async req => {
-        // Get user info
-        const {userAccess: user} = req
-
-        // Create new session
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
-
-        return {
-            data: session
-        }
-    })
-
-    handleLogIn = this.handleRESTAsync(async (req) => {
-        // Get request body
-        let body = req.body
-
-        // Validate body
-        this.validate({exchangeToken: 'required'}, body)
-
-        // Verify Exchange Token
-        const userHash = await this.verifyExchangeToken(body.exchangeToken)
-
-        // Get user, create if not exists
-        let users = await this.models.AppUser.findOrCreate({
-            where: {userHash: userHash},
-            defaults: {
-                extId: generateExtId(),
-                userHash: userHash,
-                fullName: _.startCase(dockerNames.getRandomName(false))
-            }
-        })
-
-        // Create user session
-        const user = users[0]
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
-
-        // Return response
-        return {
-            data: session
-        }
-    })
 
     /**
      * Handler chain function to validate app as client
