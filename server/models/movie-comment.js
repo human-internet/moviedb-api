@@ -29,7 +29,7 @@ module.exports = sequelize => {
         version: {
             type: Sequelize.BIGINT,
             allowNull: false,
-            defaultValue: 1
+            defaultValue: 0
         },
     }, {
         timestamps: true,
