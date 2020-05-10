@@ -271,6 +271,33 @@ class MovieDBController extends BaseController {
         }
     })
 
+    handleGetMovieRating = this.handleRESTAsync(async req => {
+        // Get movie id
+        const {movieId} = req.params
+
+        // Get movie rating
+        const movie = await this.models.MovieRating.findOne({
+            where: {movieId}
+        })
+
+        let data
+        if (!movie) {
+            // If movie not found, set values to zero
+            data = {
+                avgRating: 0, ratingCount: 0, version: 0
+            }
+        } else {
+            // Else, set from movie rating data
+            data = {
+                avgRating: movie.avgRating,
+                ratingCount: movie.ratingCount,
+                version: movie.version
+            }
+        }
+
+        return {data}
+    })
+
     route() {
         /**
          * @api {get} / Get API Status
@@ -454,6 +481,38 @@ class MovieDBController extends BaseController {
          * @apiUse ErrorResponse
          */
         this.router.post('/movies/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
+
+        /**
+         * @api {post} /movies/:movieId/rating Get Movie Rating
+         * @apiName GetMovieRating
+         * @apiGroup Movie
+         * @apiDescription Get average ratings for a Movie
+         *
+         * @apiHeader {String} userAccessToken User Access Token
+         *
+         * @apiParam (Path) {string} movieId Movie identifier from TMDb API
+         *
+         * @apiUse SuccessResponse
+         * @apiSuccess {Object} data Result data
+         * @apiSuccess {number} data.avgRating Updated movie average rating
+         * @apiSuccess {number} data.ratingCount Updated total user rating count
+         * @apiSuccess {number} data.version Data version
+         *
+         * @apiSuccessExample {json} SuccessResponse
+         *     {
+         *         "success": true,
+         *         "code": "OK",
+         *         "message": "Success",
+         *         "data": {
+         *             "avgRating": 4.5,
+         *             "ratingCount": 2,
+         *             "version": 20
+         *         }
+         *     }
+         *
+         * @apiUse ErrorResponse
+         */
+        this.router.get('/movies/:movieId/rating', this.handleValidateUserSession, this.handleGetMovieRating)
     }
 
     /**
