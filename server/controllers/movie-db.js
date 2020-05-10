@@ -301,6 +301,82 @@ class MovieDBController extends BaseController {
         return {data}
     })
 
+    handlePostUserMovieComment = this.handleRESTAsync(async req => {
+        // Get body
+        const {body} = req
+
+        // Set movieId
+        body.movieId = req.params.movieId
+
+        // Validate body
+        this.validate({
+            movieId: 'required',
+            comment: 'required'
+        }, body)
+
+        // Get parameters
+        const {movieId, comment} = body
+        const userId = req.userAccess.id
+
+        // Get models
+        const {MovieComment: MovieCommentModel, UserMovieComment: UserMovieCommentModel} = this.models
+
+        // Get current movie movie comment, if not exist create a new one
+        let rows = await MovieCommentModel.findOrCreate({
+            where: {movieId},
+            defaults: {
+                movieId
+            }
+        })
+
+        // Get movie comment instance
+        const movie = rows[0]
+
+        // Check if user has comments
+        const userComment = await UserMovieCommentModel.findOne({
+            where: {userId, movieId},
+            order: [['version', 'DESC']]
+        })
+
+        // Get unique user count
+        let uniqueUserCount = movie.uniqueUser
+
+        // If user comment not exist, add unique user
+        if (!userComment) {
+            uniqueUserCount++
+        }
+
+        // Increment version and comment count
+        const version = movie.version + 1
+        const commentsCount = movie.commentsCount + 1
+
+        // Persist comment
+        await MovieCommentModel.sequelize.transaction(async tx => {
+            // Insert user comment
+            await UserMovieCommentModel.create({
+                movieId, userId, comment, version
+            }, {transaction: tx})
+
+            // Update movie comment
+            const result = await MovieCommentModel.update({
+                commentsCount,
+                uniqueUser: uniqueUserCount,
+                version
+            }, {
+                where: {
+                    id: movie.id,
+                    version: movie.version
+                },
+                transaction: tx
+            })
+
+            // If no update affected, then throw error
+            if (result[0] === 0) {
+                throw new APIError('ERR_6')
+            }
+        })
+    })
+
     route() {
         /**
          * @api {get} / Get API Status
@@ -516,6 +592,25 @@ class MovieDBController extends BaseController {
          * @apiUse ErrorResponse
          */
         this.router.get('/movies/:movieId/rating', this.handleValidateUserSession, this.handleGetMovieRating)
+
+        /**
+         * @api {post} /movies/:movieId/comment Post Movie Comment
+         * @apiName PostUserMovieComment
+         * @apiGroup Movie
+         * @apiDescription Post a comment to a movie by User
+         *
+         * @apiHeader (Request Header) {String} userAccessToken User Access Token
+         *
+         * @apiParam (Path Variables) {string} movieId Movie identifier from TMDb API
+         * @apiParam (Request Body - application/json) {string} comment User comment
+         *
+         * @apiUse SuccessResponse
+         *
+         * @apiUse OkResponseExample
+         *
+         * @apiUse ErrorResponse
+         */
+        this.router.post('/movies/:movieId/comment', this.handleValidateUserSession, this.handlePostUserMovieComment)
     }
 
     /**

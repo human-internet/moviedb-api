@@ -23,5 +23,10 @@
     "success": false,
     "status": 400,
     "message": "rating input must be between 1 and 5"
+  },
+  "ERR_6": {
+    "success": false,
+    "status": 400,
+    "message": "movie comments has been updated, please retry"
   }
 }
