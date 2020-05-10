@@ -85,11 +85,49 @@ config.load = (configFile) => {
         config = JSON.parse(content.toString())
     }
 
-    // Load config
-    const config = require(configPath)
-
     // Set pwd to config
-    config.server.pwd = pwd
+    _.set(config, 'server.pwd', pwd)
+
+    // Override config value with env
+    config = overrideEnv(config)
+
+    return config
+}
+
+function overrideEnv(config) {
+    // Load config env mapping
+    const envMapping = require('./config-env')
+
+    // Iterate process env
+    _.forOwn(process.env, (value, key) => {
+        // If mapping not available, continue
+        if (!envMapping[key]) {
+            return
+        }
+
+        // Get config mapping
+        const c = envMapping[key]
+
+        // Convert value
+        switch (c.dataType) {
+            case 'number': {
+                value = parseInt(value, 10)
+                // if failed to parseInt, continue
+                if (!_.isFinite(value)) {
+                    return
+                }
+                break
+            }
+            case 'boolean': {
+                value = value.toLowerCase() === 'true'
+                break
+            }
+        }
+
+        // Override value
+        _.set(config, c.key, value)
+        logger.debug(`${c.key} value set from env ${key}`, {scope: 'Server.Configuration'})
+    })
 
     return config
 }
