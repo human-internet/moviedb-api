@@ -43,6 +43,14 @@ module.exports = {
             .then(() => {
                 return queryInterface.addIndex(TABLE_NAME, ['movieId'])
             })
+            .then(() => {
+                return queryInterface.addIndex(TABLE_NAME, ['movieId', 'userId'])
+            })
+            .then(() => {
+                return queryInterface.addIndex(TABLE_NAME, ['movieId', {
+                    attribute: 'version', order: 'DESC'
+                }])
+            })
     },
     down: (queryInterface) => {
         return queryInterface.dropTable(TABLE_NAME);
