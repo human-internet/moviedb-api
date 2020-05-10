@@ -154,7 +154,7 @@ function loadResponseMap(filePath) {
     const content = fs.readFileSync(filePath, 'utf8')
 
     // Parse json
-    const codes = JSON.parse(content)
+    const codes = JSON.parse(content.toString())
 
     // Convert user codes to response
     const responses = {}
