@@ -923,7 +923,7 @@ class MovieDBController extends BaseController {
 
         // If not success, throw error
         if (!respBody.success) {
-            this.logger.debug(`Received error response.`, {respBody})
+            this.logger.error(`Received error response.`, {respBody})
             throw new APIError('ERR_3')
         }
 
