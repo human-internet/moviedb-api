@@ -55,10 +55,10 @@ module.exports = {
     HUMANID_BASE_URL: {
         key: 'components.humanID.baseUrl'
     },
-    HUMANID_APP_ID: {
-        key: 'components.humanID.appId'
+    HUMANID_CLIENT_ID: {
+        key: 'components.humanID.clientId'
     },
-    HUMANID_APP_SECRET: {
-        key: 'components.humanID.appSecret'
+    HUMANID_CLIENT_SECRET: {
+        key: 'components.humanID.clientSecret'
     }
 }
