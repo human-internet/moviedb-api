@@ -210,13 +210,13 @@ class Server {
             }
         }).router)
 
-        // Handle Errors
+        // Handle Resource Not Found
         router.use((req, res) => {
             this.sendErrorResponse(res, new APIError(Constants.RESPONSE_ERROR_NOT_FOUND))
         })
 
-        // Handle Resource Not Found
-        router.use((err, req, res) => {
+        // Handle error
+        router.use((err, req, res, next) => {
             this.sendErrorResponse(res, err)
         })
 
