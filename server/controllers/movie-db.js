@@ -905,17 +905,17 @@ class MovieDBController extends BaseController {
         const conf = this.config.components.humanID
 
         // Create url
-        const url = conf.baseUrl + '/mobile/users/verifyExchangeToken'
+        const url = conf.baseUrl + '/server/users/verifyExchangeToken'
 
         // Send request
         const resp = await fetch(url, {
             method: 'post',
-            body: JSON.stringify({
-                appId: conf.appId,
-                appSecret: conf.appSecret,
-                exchangeToken
-            }),
-            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({exchangeToken}),
+            headers: {
+                'Content-Type': 'application/json',
+                'Client-ID': conf.clientId,
+                'Client-Secret': conf.clientSecret
+            },
         })
 
         // Parse resp body
@@ -927,7 +927,7 @@ class MovieDBController extends BaseController {
             throw new APIError('ERR_3')
         }
 
-        return respBody.data.userHash
+        return respBody.data.userAppId
     }
 
     /**
