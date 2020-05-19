@@ -26,8 +26,8 @@
     },
     "humanID": {
       "baseUrl": "<HUMANID_BASE_URL",
-      "appId": "<APP_ID>",
-      "appSecret": "<APP_SECRET>"
+      "clientId": "<CLIENT_ID>",
+      "clientSecret": "<CLIENT_SECRET>"
     }
   }
 }
