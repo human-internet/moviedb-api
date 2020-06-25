@@ -905,7 +905,7 @@ class MovieDBController extends BaseController {
         const conf = this.config.components.humanID
 
         // Create url
-        const url = conf.baseUrl + '/server/users/verifyExchangeToken'
+        const url = conf.baseUrl + '/server/users/exchange'
 
         // Send request
         const resp = await fetch(url, {
@@ -927,7 +927,7 @@ class MovieDBController extends BaseController {
             throw new APIError('ERR_3')
         }
 
-        return respBody.data.userAppId
+        return respBody.data.appUserId
     }
 
     /**
