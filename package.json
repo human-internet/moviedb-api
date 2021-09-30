@@ -1,55 +1,58 @@
 {
-  "name": "moviedb-api",
-  "version": "0.0.1",
-  "description": "API for showcasing 3rd-Party App integration to humanID",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "doc": "apidoc -i server/controllers/ -o docs/apidoc/",
-    "db:reset": "NODE_ENV=db npx sequelize db:drop; NODE_ENV=db sequelize db:create; NODE_ENV=db npx sequelize db:migrate; NODE_ENV=db npx sequelize db:seed:all",
-    "db:migrate": "NODE_ENV=db npx sequelize db:migrate",
-    "db:undo": "NODE_ENV=db npx sequelize db:migrate:undo",
-    "db:status": "NODE_ENV=db npx sequelize db:migrate:status"
-  },
-  "keywords": [
-    "human",
-    "id",
-    "demo",
-    "moviedb"
-  ],
-  "author": "Saggaf Arsyad <saggaf@nbs.co.id>",
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:bluenumberfoundation/moviedb-api.git"
-  },
-  "license": "GPL-3.0",
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "body-parser": "^1.19.0",
-    "cookie-parser": "^1.4.5",
-    "cors": "^2.8.5",
-    "docker-names": "^1.1.1",
-    "express": "^4.17.1",
-    "jsonwebtoken": "^8.5.1",
-    "lodash": "latest",
-    "moment": "^2.25.3",
-    "ms": "^2.1.2",
-    "mysql2": "^1.7.0",
-    "node-fetch": "^2.6.0",
-    "sequelize": "^5.21.6",
-    "sqlite3": "^4.1.1",
-    "winston": "^3.2.1"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.2",
-    "@types/express": "^4.17.5",
-    "@types/lodash": "^4.14.150",
-    "@types/node": "^13.11.1",
-    "@types/node-fetch": "^2.5.7",
-    "@types/sequelize": "^4.28.8",
-    "apidoc": "^0.17.7",
-    "nodemon": "^1.19.4",
-    "sequelize-cli": "^5.5.1"
-  }
+    "name": "moviedb-api",
+    "version": "1.0.1",
+    "description": "API for showcasing 3rd-Party App integration to humanID",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "doc": "apidoc -i server/controllers/ -o docs/apidoc/",
+        "db:reset": "NODE_ENV=db npx sequelize db:drop; NODE_ENV=db sequelize db:create; NODE_ENV=db npx sequelize db:migrate; NODE_ENV=db npx sequelize db:seed:all",
+        "db:migrate": "NODE_ENV=db npx sequelize db:migrate",
+        "db:undo": "NODE_ENV=db npx sequelize db:migrate:undo",
+        "db:status": "NODE_ENV=db npx sequelize db:migrate:status"
+    },
+    "keywords": [
+        "human",
+        "id",
+        "demo",
+        "moviedb"
+    ],
+    "author": "Saggaf Arsyad <saggaf@nbs.co.id>",
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:bluenumberfoundation/moviedb-api.git"
+    },
+    "license": "GPL-3.0",
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "body-parser": "^1.19.0",
+        "cookie-parser": "^1.4.5",
+        "cors": "^2.8.5",
+        "docker-names": "^1.1.1",
+        "express": "^4.17.1",
+        "jsonwebtoken": "^8.5.1",
+        "lodash": "latest",
+        "moment": "^2.25.3",
+        "ms": "^2.1.2",
+        "mysql2": "^1.7.0",
+        "node-fetch": "^2.6.0",
+        "sequelize": "^5.21.6",
+        "sqlite3": "^4.1.1",
+        "winston": "^3.2.1"
+    },
+    "devDependencies": {
+        "@types/bcryptjs": "^2.4.2",
+        "@types/express": "^4.17.5",
+        "@types/lodash": "^4.14.150",
+        "@types/node": "^13.11.1",
+        "@types/node-fetch": "^2.5.7",
+        "@types/sequelize": "^4.28.8",
+        "apidoc": "^0.17.7",
+        "sequelize-cli": "^5.5.1",
+        "eslint": "^7.32.0",
+        "eslint-config-prettier": "^8.3.0",
+        "eslint-plugin-prettier": "^3.4.1",
+        "prettier": "^2.3.2"
+    }
 }
