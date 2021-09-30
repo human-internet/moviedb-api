@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /**
  * @apiDefine SuccessResponse
@@ -31,127 +31,143 @@
  *   }
  */
 
-const
-    dockerNames = require('docker-names'),
-    express = require('express'),
-    fetch = require('node-fetch'),
-    jwt = require('jsonwebtoken'),
-    moment = require('moment'),
-    ms = require('ms'),
-    _ = require('lodash'),
-    AppManifest = require('../manifest'),
-    APIError = require('../api-error'),
-    BaseController = require('./base'),
-    Constants = require('../constants')
+const dockerNames = require("docker-names"),
+    express = require("express"),
+    fetch = require("node-fetch"),
+    jwt = require("jsonwebtoken"),
+    moment = require("moment"),
+    ms = require("ms"),
+    _ = require("lodash"),
+    AppManifest = require("../manifest"),
+    APIError = require("../api-error"),
+    BaseController = require("./base"),
+    Constants = require("../constants");
 
 class MovieDBController extends BaseController {
-    constructor({config, components, models, server, logger}) {
-        super({models, config, components, server})
+    constructor({ config, components, models, server, logger }) {
+        super({ models, config, components, server });
 
         // Set time
-        this.startTime = moment()
+        this.startTime = moment();
 
         // Create child logger
-        this.logger = logger.child({scope: 'MovieDB.API'})
+        this.logger = logger.child({ scope: "MovieDB.API" });
 
         // Init router
-        this.router = express.Router()
+        this.router = express.Router();
 
         // Route
-        this.route()
+        this.route();
     }
 
-    handlePostUserMovieRating = this.handleRESTAsync(async req => {
+    handlePostUserMovieRating = this.handleRESTAsync(async (req) => {
         // Get body
-        const {body} = req
+        const { body } = req;
 
         // Set movieId from path parameter
-        body.movieId = req.params.movieId
+        body.movieId = req.params.movieId;
 
         // Validate body
-        this.validate({
-            movieId: 'required'
-        }, body)
+        this.validate(
+            {
+                movieId: "required",
+            },
+            body
+        );
 
         // Get parameters
-        const {movieId, rating} = body
-        const userId = req.userAccess.id
+        const { movieId, rating } = body;
+        const userId = req.userAccess.id;
 
         // Check rating value
-        if (!_.isNumber(rating) || (rating < 1 || rating > 5)) {
-            throw new APIError('ERR_5')
+        if (!_.isNumber(rating) || rating < 1 || rating > 5) {
+            throw new APIError("ERR_5");
         }
 
         // Get models
-        const {MovieRating: MovieRatingModel, UserMovieRating: UserMovieRatingModel} = this.models
+        const { MovieRating: MovieRatingModel, UserMovieRating: UserMovieRatingModel } = this.models;
 
         // Get current movie rating, if not exist create a new one
         const movieRatings = await MovieRatingModel.findOrCreate({
-            where: {movieId},
+            where: { movieId },
             defaults: {
-                movieId
-            }
-        })
+                movieId,
+            },
+        });
 
         // Get movie rating instance
-        const movieRating = movieRatings[0]
+        const movieRating = movieRatings[0];
 
         // If user has not yet rate, then increment ratingCount
         const userRating = await UserMovieRatingModel.findOne({
-            where: {movieId, userId}
-        })
+            where: { movieId, userId },
+        });
 
         // Get rating count and sum
-        let {ratingCount} = movieRating
-        let sumRating = movieRating.ratingCount * movieRating.avgRating
+        let { ratingCount } = movieRating;
+        let sumRating = movieRating.ratingCount * movieRating.avgRating;
 
         // Determine average rating
-        let avgRating, id
+        let avgRating, id;
         if (userRating) {
             // If user rating already available, recalculate average
-            let diffRating = rating - userRating.rating
-            avgRating = (sumRating + diffRating) / ratingCount
-            id = userRating.id
+            let diffRating = rating - userRating.rating;
+            avgRating = (sumRating + diffRating) / ratingCount;
+            id = userRating.id;
         } else {
             // Else, new user rating, add rating and increment count
-            ratingCount++
-            avgRating = (sumRating + rating) / ratingCount
+            ratingCount++;
+            avgRating = (sumRating + rating) / ratingCount;
         }
 
         // Increment version
-        const version = movieRating.version + 1
+        const version = movieRating.version + 1;
 
         // Persist user rating and movie rating average
-        const data = await MovieRatingModel.sequelize.transaction(async tx => {
+        const data = await MovieRatingModel.sequelize.transaction(async (tx) => {
             // Upsert user rating
-            await UserMovieRatingModel.upsert({
-                id, movieId, userId, rating, version
-            }, {transaction: tx})
+            await UserMovieRatingModel.upsert(
+                {
+                    id,
+                    movieId,
+                    userId,
+                    rating,
+                    version,
+                },
+                { transaction: tx }
+            );
 
             // Update movie
-            const result = await MovieRatingModel.update({
-                avgRating, ratingCount, version
-            }, {
-                where: {
-                    id: movieRating.id,
-                    version: movieRating.version
+            const result = await MovieRatingModel.update(
+                {
+                    avgRating,
+                    ratingCount,
+                    version,
                 },
-                transaction: tx
-            })
+                {
+                    where: {
+                        id: movieRating.id,
+                        version: movieRating.version,
+                    },
+                    transaction: tx,
+                }
+            );
 
             // If no update affected, then throw error
             if (result[0] === 0) {
-                throw new APIError('ERR_4')
+                throw new APIError("ERR_4");
             }
 
             // Return average rating
             return Promise.resolve({
-                avgRating, ratingCount, version
-            })
-        })
+                avgRating,
+                ratingCount,
+                version,
+            });
+        });
 
-        return {data}
-    })
+        return { data };
+    });
 
     /**
      * Handler chain function to validate user session
@@ -159,301 +175,323 @@ class MovieDBController extends BaseController {
      */
     handleValidateUserSession = this.handleAsync(async (req, res, next) => {
         // Get access token
-        const userAccessToken = req.header("userAccessToken")
+        const userAccessToken = req.header("userAccessToken");
 
         // Validate session
-        req.userAccess = await this.validateUserSession(userAccessToken)
+        req.userAccess = await this.validateUserSession(userAccessToken);
 
         // Continue
-        next()
-    })
+        next();
+    });
 
     handleGetAPIStatus = this.handleREST(() => {
         return {
             data: {
                 name: AppManifest.AppName,
                 version: AppManifest.AppVersion,
-                uptime: this.startTime.fromNow()
-            }
-        }
-    })
+                uptime: this.startTime.fromNow(),
+            },
+        };
+    });
 
     handleGetProfile = this.handleRESTAsync(async (req) => {
         // Get user info
-        const {userAccess: user} = req
+        const { userAccess: user } = req;
 
-        const u = await this.models.AppUser.findByPk(user.id)
+        const u = await this.models.AppUser.findByPk(user.id);
 
         return {
             data: {
                 id: u.extId,
                 fullName: u.fullName,
-                updatedAt: getUnixTime(u.updatedAt)
-            }
-        }
-    })
+                updatedAt: getUnixTime(u.updatedAt),
+            },
+        };
+    });
 
-    handleLogOut = this.handleRESTAsync(async req => {
+    handleLogOut = this.handleRESTAsync(async (req) => {
         // Get session token
-        const userAccessToken = req.header("userAccessToken")
+        const userAccessToken = req.header("userAccessToken");
 
         // Try validate session
-        let session
+        let session;
         try {
-            session = await this.validateUserSession(userAccessToken)
+            session = await this.validateUserSession(userAccessToken);
         } catch (e) {
-            this.logger.error(`failed to validate user session. Error=${e.message}`)
-            return
+            this.logger.error(`failed to validate user session. Error=${e.message}`);
+            return;
         }
 
         // Invalidate session
-        const result = await this.models.AppUser.update({
-            lastLogIn: null,
-            updatedAt: new Date()
-        }, {
-            where: {id: session.id}
-        })
+        const result = await this.models.AppUser.update(
+            {
+                lastLogIn: null,
+                updatedAt: new Date(),
+            },
+            {
+                where: { id: session.id },
+            }
+        );
 
-        this.logger.debug(`Result=${result}`)
-    })
+        this.logger.debug(`Result=${result}`);
+    });
 
-    handleUpdateProfile = this.handleRESTAsync(async req => {
+    handleUpdateProfile = this.handleRESTAsync(async (req) => {
         // Get user info
-        const {userAccess: user} = req
+        const { userAccess: user } = req;
 
         // Get request body
-        const body = req.body
+        const body = req.body;
 
         // Update user name
-        await this.models.AppUser.update({
-            fullName: body.fullName
-        }, {
-            where: {id: user.id}
-        })
-    })
+        await this.models.AppUser.update(
+            {
+                fullName: body.fullName,
+            },
+            {
+                where: { id: user.id },
+            }
+        );
+    });
 
-    handleRefreshSession = this.handleRESTAsync(async req => {
+    handleRefreshSession = this.handleRESTAsync(async (req) => {
         // Get user info
-        const {userAccess: user} = req
+        const { userAccess: user } = req;
 
         // Create new session
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()));
 
         return {
-            data: session
-        }
-    })
+            data: session,
+        };
+    });
 
     handleLogIn = this.handleRESTAsync(async (req) => {
         // Get request body
-        let body = req.body
+        let body = req.body;
 
         // Validate body
-        this.validate({exchangeToken: 'required'}, body)
+        this.validate({ exchangeToken: "required" }, body);
 
         // Verify Exchange Token
-        const userHash = await this.verifyExchangeToken(body.exchangeToken)
+        const userHash = await this.verifyExchangeToken(body.exchangeToken);
 
         // Get user, create if not exists
         let users = await this.models.AppUser.findOrCreate({
-            where: {userHash: userHash},
+            where: { userHash: userHash },
             defaults: {
                 extId: generateExtId(),
                 userHash: userHash,
-                fullName: _.startCase(dockerNames.getRandomName(false))
-            }
-        })
+                fullName: _.startCase(dockerNames.getRandomName(false)),
+            },
+        });
 
         // Create user session
-        const user = users[0]
-        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()))
+        const user = users[0];
+        const session = await this.newUserSession(user.id, user.extId, getUnixTime(new Date()));
 
         // Return response
         return {
-            data: session
-        }
-    })
+            data: session,
+        };
+    });
 
-    handleGetMovieRating = this.handleRESTAsync(async req => {
+    handleGetMovieRating = this.handleRESTAsync(async (req) => {
         // Get movie id
-        const {movieId} = req.params
+        const { movieId } = req.params;
 
         // Get movie rating
         const movie = await this.models.MovieRating.findOne({
-            where: {movieId}
-        })
+            where: { movieId },
+        });
 
-        let data
+        let data;
         if (!movie) {
             // If movie not found, set values to zero
             data = {
-                avgRating: 0, ratingCount: 0, version: 0
-            }
+                avgRating: 0,
+                ratingCount: 0,
+                version: 0,
+            };
         } else {
             // Else, set from movie rating data
             data = {
                 avgRating: movie.avgRating,
                 ratingCount: movie.ratingCount,
-                version: movie.version
-            }
+                version: movie.version,
+            };
         }
 
-        return {data}
-    })
+        return { data };
+    });
 
-    handlePostUserMovieComment = this.handleRESTAsync(async req => {
+    handlePostUserMovieComment = this.handleRESTAsync(async (req) => {
         // Get body
-        const {body} = req
+        const { body } = req;
 
         // Set movieId
-        body.movieId = req.params.movieId
+        body.movieId = req.params.movieId;
 
         // Validate body
-        this.validate({
-            movieId: 'required',
-            comment: 'required'
-        }, body)
+        this.validate(
+            {
+                movieId: "required",
+                comment: "required",
+            },
+            body
+        );
 
         // Get parameters
-        const {movieId, comment} = body
-        const userId = req.userAccess.id
+        const { movieId, comment } = body;
+        const userId = req.userAccess.id;
 
         // Get models
-        const {MovieComment: MovieCommentModel, UserMovieComment: UserMovieCommentModel} = this.models
+        const { MovieComment: MovieCommentModel, UserMovieComment: UserMovieCommentModel } = this.models;
 
         // Get current movie movie comment, if not exist create a new one
         let rows = await MovieCommentModel.findOrCreate({
-            where: {movieId},
+            where: { movieId },
             defaults: {
-                movieId
-            }
-        })
+                movieId,
+            },
+        });
 
         // Get movie comment instance
-        const movie = rows[0]
+        const movie = rows[0];
 
         // Check if user has comments
         const userComment = await UserMovieCommentModel.findOne({
-            where: {userId, movieId},
-            order: [['version', 'DESC']]
-        })
+            where: { userId, movieId },
+            order: [["version", "DESC"]],
+        });
 
         // Get unique user count
-        let uniqueUserCount = movie.uniqueUser
+        let uniqueUserCount = movie.uniqueUser;
 
         // If user comment not exist, add unique user
         if (!userComment) {
-            uniqueUserCount++
+            uniqueUserCount++;
         }
 
         // Increment version and comment count
-        const version = movie.version + 1
-        const commentsCount = movie.commentsCount + 1
+        const version = movie.version + 1;
+        const commentsCount = movie.commentsCount + 1;
 
         // Persist comment
-        await MovieCommentModel.sequelize.transaction(async tx => {
+        await MovieCommentModel.sequelize.transaction(async (tx) => {
             // Insert user comment
-            await UserMovieCommentModel.create({
-                movieId, userId, comment, version
-            }, {transaction: tx})
+            await UserMovieCommentModel.create(
+                {
+                    movieId,
+                    userId,
+                    comment,
+                    version,
+                },
+                { transaction: tx }
+            );
 
             // Update movie comment
-            const result = await MovieCommentModel.update({
-                commentsCount,
-                uniqueUser: uniqueUserCount,
-                version
-            }, {
-                where: {
-                    id: movie.id,
-                    version: movie.version
+            const result = await MovieCommentModel.update(
+                {
+                    commentsCount,
+                    uniqueUser: uniqueUserCount,
+                    version,
                 },
-                transaction: tx
-            })
+                {
+                    where: {
+                        id: movie.id,
+                        version: movie.version,
+                    },
+                    transaction: tx,
+                }
+            );
 
             // If no update affected, then throw error
             if (result[0] === 0) {
-                throw new APIError('ERR_6')
+                throw new APIError("ERR_6");
             }
-        })
-    })
+        });
+    });
 
-    handleListUserMovieComments = this.handleRESTAsync(async req => {
+    handleListUserMovieComments = this.handleRESTAsync(async (req) => {
         // Get parameters
-        let {movieId} = req.params
-        let {skip = '0', limit = '10', sortBy = 'latest'} = req.query
+        let { movieId } = req.params;
+        let { skip = "0", limit = "10", sortBy = "latest" } = req.query;
 
         // Convert to number
-        skip = parseInt(skip, 10)
+        skip = parseInt(skip, 10);
         if (!_.isFinite(skip)) {
-            skip = 0
+            skip = 0;
         }
 
-        limit = parseInt(limit, 10)
+        limit = parseInt(limit, 10);
         if (!_.isFinite(limit)) {
-            limit = 10
+            limit = 10;
         }
 
         // Get Movie Comment metadata
         const movieMeta = await this.models.MovieComment.findOne({
-            where: {movieId}
-        })
+            where: { movieId },
+        });
 
         // If movie meta is not available, return
         if (!movieMeta) {
             return {
                 data: {
                     comments: [],
-                    _metadata: {skip, limit, sortBy, commentsCount: 0, uniqueUserCount: 0}
-                }
-            }
+                    _metadata: { skip, limit, sortBy, commentsCount: 0, uniqueUserCount: 0 },
+                },
+            };
         }
 
         // Prepare sort by
-        let orderOpt
+        let orderOpt;
         switch (sortBy) {
-            case 'earliest': {
-                orderOpt = [['version', 'ASC']]
-                break
+            case "earliest": {
+                orderOpt = [["version", "ASC"]];
+                break;
             }
             default:
-                sortBy = 'latest'
-                orderOpt = [['version', 'DESC']]
+                sortBy = "latest";
+                orderOpt = [["version", "DESC"]];
         }
 
         // Get comments
         const comments = await this.models.UserMovieComment.findAll({
-            where: {movieId},
+            where: { movieId },
             limit: limit,
             offset: skip,
             order: orderOpt,
-            include: ['user']
-        })
+            include: ["user"],
+        });
 
         // Compose response
-        const commentsResp = comments.map(item => {
+        const commentsResp = comments.map((item) => {
             return {
                 id: item.id,
                 userId: item.user.extId,
                 userName: item.user.fullName,
                 comment: item.comment,
                 version: item.version,
-                updatedAt: getUnixTime(item.updatedAt)
-            }
-        })
+                updatedAt: getUnixTime(item.updatedAt),
+            };
+        });
 
         const metaResp = {
-            skip, limit, sortBy,
+            skip,
+            limit,
+            sortBy,
             commentsCount: movieMeta.commentsCount,
             uniqueUserCount: movieMeta.uniqueUser,
-        }
+        };
 
         return {
             data: {
                 comments: commentsResp,
-                _metadata: metaResp
-            }
-        }
-    })
+                _metadata: metaResp,
+            },
+        };
+    });
 
     route() {
         /**
@@ -481,7 +519,7 @@ class MovieDBController extends BaseController {
          *   }
          *
          */
-        this.router.get('/', this.handleGetAPIStatus)
+        this.router.get("/", this.handleGetAPIStatus);
 
         /**
          * @api {post} /users/log-in Log In
@@ -511,7 +549,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.post('/users/log-in', this.handleValidateClientApp, this.handleLogIn)
+        this.router.post("/users/log-in", this.handleValidateClientApp, this.handleLogIn);
 
         /**
          * @api {get} /users/profile Get User Profile
@@ -541,7 +579,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.get('/users/profile', this.handleValidateUserSession, this.handleGetProfile)
+        this.router.get("/users/profile", this.handleValidateUserSession, this.handleGetProfile);
 
         /**
          * @api {put} /users/refresh-session Refresh Session
@@ -569,7 +607,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.put('/users/refresh-session', this.handleValidateUserSession, this.handleRefreshSession)
+        this.router.put("/users/refresh-session", this.handleValidateUserSession, this.handleRefreshSession);
 
         /**
          * @api {put} /users/profile Update Profile
@@ -587,7 +625,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.put('/users/profile', this.handleValidateUserSession, this.handleUpdateProfile)
+        this.router.put("/users/profile", this.handleValidateUserSession, this.handleUpdateProfile);
 
         /**
          * @api {put} /users/log-out Log Out
@@ -603,7 +641,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.put('/users/log-out', this.handleLogOut)
+        this.router.put("/users/log-out", this.handleLogOut);
 
         /**
          * @api {post} /movies/:movieId/rating Post Movie Rating
@@ -637,7 +675,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.post('/movies/:movieId/rating', this.handleValidateUserSession, this.handlePostUserMovieRating)
+        this.router.post("/movies/:movieId/rating", this.handleValidateUserSession, this.handlePostUserMovieRating);
 
         /**
          * @api {get} /movies/:movieId/rating Get Movie Rating
@@ -669,7 +707,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.get('/movies/:movieId/rating', this.handleValidateUserSession, this.handleGetMovieRating)
+        this.router.get("/movies/:movieId/rating", this.handleValidateUserSession, this.handleGetMovieRating);
 
         /**
          * @api {post} /movies/:movieId/comment Post Movie Comment
@@ -688,7 +726,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.post('/movies/:movieId/comment', this.handleValidateUserSession, this.handlePostUserMovieComment)
+        this.router.post("/movies/:movieId/comment", this.handleValidateUserSession, this.handlePostUserMovieComment);
 
         /**
          * @api {get} /movies/:movieId/comments List User Movie Comments
@@ -780,7 +818,7 @@ class MovieDBController extends BaseController {
          *
          * @apiUse ErrorResponse
          */
-        this.router.get('/movies/:movieId/comments', this.handleValidateUserSession, this.handleListUserMovieComments)
+        this.router.get("/movies/:movieId/comments", this.handleValidateUserSession, this.handleListUserMovieComments);
     }
 
     /**
@@ -789,16 +827,16 @@ class MovieDBController extends BaseController {
      */
     handleValidateClientApp = (req, res, next) => {
         // Get client secret
-        let clientSecret = req.header("clientSecret")
+        let clientSecret = req.header("clientSecret");
 
         // Validate client secret
         if (clientSecret !== this.config.client.appSecret) {
-            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
+            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED);
         }
 
         // Continue
-        next()
-    }
+        next();
+    };
 
     /**
      * Generate session identifier
@@ -808,8 +846,8 @@ class MovieDBController extends BaseController {
      * @return {string} User Session Id
      */
     createSessionId(userExtId, lastLogInMillis) {
-        const raw = `${userExtId}-${lastLogInMillis}`
-        return this.components.Common.hmac(raw, this.config.client.sessionIdSecret)
+        const raw = `${userExtId}-${lastLogInMillis}`;
+        return this.components.Common.hmac(raw, this.config.client.sessionIdSecret);
     }
 
     /**
@@ -826,35 +864,41 @@ class MovieDBController extends BaseController {
      */
     async newUserSession(userId, userExtId, timestamp) {
         // Get jwt secret
-        const {jwtSecret, jwtLifetime} = this.config.client
+        const { jwtSecret, jwtLifetime } = this.config.client;
 
-        await this.models.AppUser.update({
-            lastLogIn: timestamp * 1000,
-            updatedAt: timestamp * 1000
-        }, {
-            where: {id: userId}
-        })
+        await this.models.AppUser.update(
+            {
+                lastLogIn: timestamp * 1000,
+                updatedAt: timestamp * 1000,
+            },
+            {
+                where: { id: userId },
+            }
+        );
 
         // Create session id
-        const sessionId = this.createSessionId(userExtId, timestamp)
+        const sessionId = this.createSessionId(userExtId, timestamp);
 
         // Calculate expiredAt
-        const durationMs = ms(jwtLifetime)
-        const expiredAt = timestamp + (durationMs / 1000)
+        const durationMs = ms(jwtLifetime);
+        const expiredAt = timestamp + durationMs / 1000;
 
         // Create session
-        const jwtSession = jwt.sign({
-            exp: expiredAt,
-            data: {
-                userId: userExtId,
-                sessionId: sessionId
-            }
-        }, jwtSecret)
+        const jwtSession = jwt.sign(
+            {
+                exp: expiredAt,
+                data: {
+                    userId: userExtId,
+                    sessionId: sessionId,
+                },
+            },
+            jwtSecret
+        );
 
         return {
             token: jwtSession,
-            expiredAt: expiredAt
-        }
+            expiredAt: expiredAt,
+        };
     }
 
     /**
@@ -881,15 +925,15 @@ class MovieDBController extends BaseController {
                 if (err || !payload) {
                     // Handle expire error
                     if (err instanceof jwt.TokenExpiredError) {
-                        return reject(new APIError('ERR_1', {source: err}))
+                        return reject(new APIError("ERR_1", { source: err }));
                     }
                     // Else, return invalid token
-                    return reject(new APIError('ERR_2', {source: err}))
+                    return reject(new APIError("ERR_2", { source: err }));
                 }
-                resolve(payload)
-            })
-        })
-    }
+                resolve(payload);
+            });
+        });
+    };
 
     /**
      * @typedef {Object} UserSessionJWTPayload
@@ -902,33 +946,33 @@ class MovieDBController extends BaseController {
 
     verifyExchangeToken = async (exchangeToken) => {
         // Get component config
-        const conf = this.config.components.humanID
+        const conf = this.config.components.humanID;
 
         // Create url
-        const url = conf.baseUrl + '/server/users/exchange'
+        const url = conf.baseUrl + "/server/users/exchange";
 
         // Send request
         const resp = await fetch(url, {
-            method: 'post',
-            body: JSON.stringify({exchangeToken}),
+            method: "post",
+            body: JSON.stringify({ exchangeToken }),
             headers: {
-                'Content-Type': 'application/json',
-                'Client-ID': conf.clientId,
-                'Client-Secret': conf.clientSecret
+                "Content-Type": "application/json",
+                "Client-ID": conf.clientId,
+                "Client-Secret": conf.clientSecret,
             },
-        })
+        });
 
         // Parse resp body
-        const respBody = await resp.json()
+        const respBody = await resp.json();
 
         // If not success, throw error
         if (!respBody.success) {
-            this.logger.error(`Received error response.`, {respBody})
-            throw new APIError('ERR_3')
+            this.logger.error(`Received error response.`, { respBody });
+            throw new APIError("ERR_3");
         }
 
-        return respBody.data.appUserId
-    }
+        return respBody.data.appUserId;
+    };
 
     /**
      * Validate user session
@@ -938,49 +982,49 @@ class MovieDBController extends BaseController {
      */
     async validateUserSession(userAccessToken) {
         // Verify and extract payload from jwt
-        const payload = await this.verifyJWT(userAccessToken)
+        const payload = await this.verifyJWT(userAccessToken);
 
         // Get user
         let user = await this.models.AppUser.findOne({
-            where: {extId: payload.data.userId},
-        })
+            where: { extId: payload.data.userId },
+        });
 
         // If user not found, throw error
         if (!user) {
-            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
+            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED);
         }
 
         // Get last log in millis in UTC
         let lastLogIn;
         if (!user.lastLogIn) {
-            lastLogIn = -1
+            lastLogIn = -1;
         } else {
-            lastLogIn = getUnixTime(user.lastLogIn)
+            lastLogIn = getUnixTime(user.lastLogIn);
         }
 
         // Generate session identifier
-        const currentSessionId = this.createSessionId(user.extId, lastLogIn)
+        const currentSessionId = this.createSessionId(user.extId, lastLogIn);
 
         // If current session id is different with payload, throw error
         if (currentSessionId !== payload.data.sessionId) {
-            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED)
+            throw new APIError(Constants.RESPONSE_ERROR_UNAUTHORIZED);
         }
 
         // Return user payload
         return {
             id: user.id,
-            extId: user.extId
-        }
+            extId: user.extId,
+        };
     }
 }
 
 function generateExtId() {
-    let id = getUnixTime(new Date())
-    return `${id}`
+    let id = getUnixTime(new Date());
+    return `${id}`;
 }
 
 function getUnixTime(t) {
-    return Math.round(t.getTime() / 1000)
+    return Math.round(t.getTime() / 1000);
 }
 
-module.exports = MovieDBController
+module.exports = MovieDBController;

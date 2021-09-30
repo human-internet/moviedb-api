@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 /**
  * @typedef {Object} Configuration
@@ -43,14 +43,13 @@
  * @property {string} appSecret
  */
 
-const
-    fs = require('fs'),
-    path = require('path'),
-    logger = require('./logger'),
-    _ = require('lodash')
+const fs = require("fs"),
+    path = require("path"),
+    logger = require("./logger"),
+    _ = require("lodash");
 
 // Init module
-const config = {}
+const config = {};
 
 /**
  * Load configuration
@@ -60,76 +59,76 @@ const config = {}
  */
 config.load = (configFile) => {
     // Determine working dir value
-    let pwd
+    let pwd;
     if (process.env.SERVER_PWD) {
-        pwd = process.env.SERVER_PWD
+        pwd = process.env.SERVER_PWD;
     } else {
-        pwd = process.cwd()
+        pwd = process.cwd();
     }
 
     // Resolve config path
-    const configPath = path.join(pwd, configFile)
+    const configPath = path.join(pwd, configFile);
 
     // If file not exist, throw error
-    let config
+    let config;
     if (!fs.existsSync(configPath)) {
         logger.warn(`config file not found. Path=${configPath}`, {
-            scope: 'Server.Configuration'
-        })
-        config = {}
+            scope: "Server.Configuration",
+        });
+        config = {};
     } else {
         // Read file sync
-        const content = fs.readFileSync(configFile, 'utf8')
+        const content = fs.readFileSync(configFile, "utf8");
 
         // Parse json
-        config = JSON.parse(content.toString())
+        config = JSON.parse(content.toString());
     }
 
     // Set pwd to config
-    _.set(config, 'server.pwd', pwd)
+    _.set(config, "server.pwd", pwd);
 
     // Override config value with env
-    config = overrideEnv(config)
+    config = overrideEnv(config);
 
-    return config
-}
+    return config;
+};
 
 function overrideEnv(config) {
     // Load config env mapping
-    const envMapping = require('./config-env')
+    const envMapping = require("./config-env");
 
     // Iterate process env
     _.forOwn(process.env, (value, key) => {
         // If mapping not available, continue
         if (!envMapping[key]) {
-            return
+            return;
         }
 
         // Get config mapping
-        const c = envMapping[key]
+        const c = envMapping[key];
 
         // Convert value
         switch (c.dataType) {
-            case 'number': {
-                value = parseInt(value, 10)
+            case "number": {
+                value = parseInt(value, 10);
                 // if failed to parseInt, continue
                 if (!_.isFinite(value)) {
-                    return
+                    return;
                 }
-                break
+                break;
             }
-            case 'boolean': {
-                value = value.toLowerCase() === 'true'
-                break
+            case "boolean": {
+                value = value.toLowerCase() === "true";
+                break;
             }
         }
 
         // Override value
-        _.set(config, c.key, value)
-        logger.debug(`${c.key} value set from env ${key}`, {scope: 'Server.Configuration'})
-    })
+        _.set(config, c.key, value);
+        logger.debug(`${c.key} value set from env ${key}`, { scope: "Server.Configuration" });
+    });
 
-    return config
+    return config;
 }
 
-module.exports = config
+module.exports = config;

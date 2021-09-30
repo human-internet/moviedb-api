@@ -1,11 +1,10 @@
-'use strict'
+"use strict";
 
-const
-    crypto = require('crypto'),
-    jwt = require('jsonwebtoken')
+const crypto = require("crypto"),
+    jwt = require("jsonwebtoken");
 
 // Init module
-const common = {}
+const common = {};
 
 /**
  * Generate hmac hash
@@ -15,8 +14,8 @@ const common = {}
  * @returns {string}
  */
 common.hmac = (data, secret) => {
-    return crypto.createHmac('sha256', secret).update(data).digest('hex')
-}
+    return crypto.createHmac("sha256", secret).update(data).digest("hex");
+};
 
 /**
  * Create (sign) JWT
@@ -26,8 +25,8 @@ common.hmac = (data, secret) => {
  * @returns {undefined|*}
  */
 common.createJWT = (user, secret) => {
-    return jwt.sign({id: user.id}, secret)
-}
+    return jwt.sign({ id: user.id }, secret);
+};
 
 /**
  * Verify JWT
@@ -40,12 +39,12 @@ common.verifyJWT = (token, secret) => {
     return new Promise((resolve, reject) => {
         jwt.verify(token, secret, (err, decodedToken) => {
             if (err || !decodedToken) {
-                return reject(err)
+                return reject(err);
             }
-            resolve(decodedToken)
-        })
-    })
-}
+            resolve(decodedToken);
+        });
+    });
+};
 
 /**
  * Generate random string
@@ -55,19 +54,19 @@ common.verifyJWT = (token, secret) => {
  * @returns {string}
  */
 common.randStr = (length, type) => {
-    let result = ''
-    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = "";
+    let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     if (type === 1) {
-        characters = '0123456789'
+        characters = "0123456789";
     } else if (type === 2) {
-        characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     }
-    let charactersLength = characters.length
+    let charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength))
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-    return result
-}
+    return result;
+};
 
 /**
  * Combine country code and phone number
@@ -77,8 +76,8 @@ common.randStr = (length, type) => {
  * @returns {*}
  */
 common.combinePhone = (countryCode, phone) => {
-    phone = phone[0] === '0' ? phone.substring(1) : phone
-    return countryCode + phone
-}
+    phone = phone[0] === "0" ? phone.substring(1) : phone;
+    return countryCode + phone;
+};
 
-module.exports = common
+module.exports = common;

@@ -1,6 +1,6 @@
 {
   "name": "MovieDB.API",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "description": "API for showcasing 3rd-Party App integration to humanID",
   "title": "MovieDB API",
   "url": "http://localhost:3001/api/v1"

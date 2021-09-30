@@ -1,4 +1,4 @@
-'use strict'
+"use strict";
 
 class APIError extends Error {
     /**
@@ -11,17 +11,17 @@ class APIError extends Error {
      */
     constructor(code, opt = {}) {
         // Deconstruct param
-        const {message = null, source = null} = opt
+        const { message = null, source = null } = opt;
 
         // Call super constructor
         super(message);
 
         // Set members
-        this.name = 'APIError'
-        this.code = code
-        this.message = message
-        this.source = source
+        this.name = "APIError";
+        this.code = code;
+        this.message = message;
+        this.source = source;
     }
 }
 
-module.exports = APIError
+module.exports = APIError;

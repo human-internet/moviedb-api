@@ -5,43 +5,42 @@
  * @property {Array.<string, *>} components Components
  */
 
-const
-    Constants = require('./constants'),
-    AppManifest = require('./manifest'),
-    Config = require('./config'),
-    logger = require('./logger'),
-    express = require('express'),
-    bodyParser = require('body-parser'),
-    fs = require('fs'),
-    _ = require('lodash'),
-    SequelizeDataSource = require('./ds-sequelize'),
-    MovieDBController = require('./controllers/movie-db'),
-    APIError = require('./api-error')
+const Constants = require("./constants"),
+    AppManifest = require("./manifest"),
+    Config = require("./config"),
+    logger = require("./logger"),
+    express = require("express"),
+    bodyParser = require("body-parser"),
+    fs = require("fs"),
+    _ = require("lodash"),
+    SequelizeDataSource = require("./ds-sequelize"),
+    MovieDBController = require("./controllers/movie-db"),
+    APIError = require("./api-error");
 
-'use strict'
+("use strict");
 
 class Server {
     constructor(opt) {
         // Set logger
-        this.logger = logger
+        this.logger = logger;
 
         // Get parameters
-        const {configFile, models: modelOpts, components: componentOpts} = opt
+        const { configFile, models: modelOpts, components: componentOpts } = opt;
 
         // Load config
-        this.config = Config.load(configFile)
+        this.config = Config.load(configFile);
 
         // Load components
-        this.initComponents(this.config.server.pwd + '/server/components', componentOpts)
+        this.initComponents(this.config.server.pwd + "/server/components", componentOpts);
 
         // Load data sources
-        this.initDataSources()
+        this.initDataSources();
 
         // Load models
-        this.initModels(this.config.server.pwd + '/server/models', modelOpts)
+        this.initModels(this.config.server.pwd + "/server/models", modelOpts);
 
         // Initiate routing
-        this.initRouting()
+        this.initRouting();
     }
 
     /**
@@ -49,34 +48,33 @@ class Server {
      */
     initDataSources() {
         // Get config
-        const conf = this.config.dataSources
+        const conf = this.config.dataSources;
 
         // Init data sources object
-        const dataSources = {}
+        const dataSources = {};
 
         // Iterate configurations
-        Object.keys(conf).forEach(name => {
+        Object.keys(conf).forEach((name) => {
             // Get data source config
             /** @type {DataSourceConfiguration} item */
-            const itemConf = conf[name]
+            const itemConf = conf[name];
             let ds;
             if (itemConf.lib === Constants.DS_LIB_SEQUELIZE) {
-                ds = new SequelizeDataSource(itemConf, {logger})
+                ds = new SequelizeDataSource(itemConf, { logger });
             } else {
-                return
+                return;
             }
 
             // Init data sources
-            ds.init()
+            ds.init();
 
             // Set data source
-            dataSources[name] = ds
-            this.logger.debug(`Data Source added: ${name}`, {scope: 'Server'})
-        })
+            dataSources[name] = ds;
+            this.logger.debug(`Data Source added: ${name}`, { scope: "Server" });
+        });
 
-        this.dataSources = dataSources
+        this.dataSources = dataSources;
     }
-
 
     /**
      * Initialize models
@@ -86,44 +84,43 @@ class Server {
      */
     initModels(modelsDir, opt) {
         // Get data sources
-        const {dataSources} = this
+        const { dataSources } = this;
 
         // Init models
-        const models = {}
+        const models = {};
 
         // Filter models list
-        Object.keys(opt).forEach(name => {
+        Object.keys(opt).forEach((name) => {
             // Get data source
-            const ds = dataSources[opt[name]]
+            const ds = dataSources[opt[name]];
 
             // If data source not found, continue
             if (!ds) {
-                return
+                return;
             }
 
             // Create file path
-            const filePath = `${modelsDir}/${_.kebabCase(name)}.js`
+            const filePath = `${modelsDir}/${_.kebabCase(name)}.js`;
 
             // If file di not exist in models dir, continue
             if (!fs.existsSync(filePath)) {
-                return
+                return;
             }
 
             // Load model
-            models[name] = ds.initModel(filePath)
-            this.logger.debug(`Model added: ${name}`, {scope: 'Server'})
-        })
+            models[name] = ds.initModel(filePath);
+            this.logger.debug(`Model added: ${name}`, { scope: "Server" });
+        });
 
         // Associates models
-        Object.keys(models).forEach(modelName => {
+        Object.keys(models).forEach((modelName) => {
             if (models[modelName].associate) {
-                models[modelName].associate(models)
+                models[modelName].associate(models);
             }
-        })
+        });
 
-        this.models = models
+        this.models = models;
     }
-
 
     /**
      * @typedef {Object} ComponentOption
@@ -138,90 +135,93 @@ class Server {
      */
     initComponents(dir, opt) {
         // Get Component configuration map
-        const confMap = this.config.components
+        const confMap = this.config.components;
 
         // Init components
-        const components = {}
+        const components = {};
 
         // Iterate components
-        Object.keys(opt).forEach(name => {
+        Object.keys(opt).forEach((name) => {
             // Get component config
-            const cfg = opt[name]
+            const cfg = opt[name];
 
             // Determine component file name
-            let fileName
+            let fileName;
             if (cfg && cfg.fileName) {
-                fileName = cfg.fileName
+                fileName = cfg.fileName;
             } else {
-                fileName = `${_.kebabCase(name)}.js`
+                fileName = `${_.kebabCase(name)}.js`;
             }
 
             // Create file path
-            const filePath = `${dir}/${fileName}`
+            const filePath = `${dir}/${fileName}`;
 
             // If file do not exist in models dir, skip
             if (!fs.existsSync(filePath)) {
-                return
+                return;
             }
 
             // Load file
-            const comp = require(filePath)
+            const comp = require(filePath);
 
             // Check if constructor available, call init function
-            if (typeof comp.init === 'function') {
+            if (typeof comp.init === "function") {
                 // Initiate component and pass component config
-                comp.init(confMap[name])
+                comp.init(confMap[name]);
             }
 
             // Add component
-            components[name] = require(filePath)
-            this.logger.debug(`Component loaded: ${name}`, {scope: 'Server'})
-        })
+            components[name] = require(filePath);
+            this.logger.debug(`Component loaded: ${name}`, { scope: "Server" });
+        });
 
         // Set components
-        this.components = components
+        this.components = components;
     }
 
     /**
      * Initialize routing
      */
     initRouting() {
-        const {models, components, config} = this
+        const { models, components, config } = this;
 
         // Configure router
-        const router = express()
+        const router = express();
 
         // Configure global middleware
-        router.use(bodyParser.json())
-        router.use(bodyParser.urlencoded({extended: true}))
+        router.use(bodyParser.json());
+        router.use(bodyParser.urlencoded({ extended: true }));
 
         // Init Routing
-        router.use('/docs', express.static(this.config.server.pwd + '/docs/apidoc'))
-        router.use(config.server.basePath, new MovieDBController({
-            logger,
-            components,
-            config,
-            models,
-            server: {
-                handleAsync: this.handleAsync,
-                handleREST: this.handleREST,
-                handleRESTAsync: this.handleRESTAsync,
-                sendResponse: this.sendResponse
-            }
-        }).router)
+        router.use("/docs", express.static(this.config.server.pwd + "/docs/apidoc"));
+        router.use(
+            config.server.basePath,
+            new MovieDBController({
+                logger,
+                components,
+                config,
+                models,
+                server: {
+                    handleAsync: this.handleAsync,
+                    handleREST: this.handleREST,
+                    handleRESTAsync: this.handleRESTAsync,
+                    sendResponse: this.sendResponse,
+                },
+            }).router
+        );
 
         // Handle Resource Not Found
         router.use((req, res) => {
-            this.sendErrorResponse(res, new APIError(Constants.RESPONSE_ERROR_NOT_FOUND))
-        })
+            this.sendErrorResponse(res, new APIError(Constants.RESPONSE_ERROR_NOT_FOUND));
+        });
 
         // Handle error
         router.use((err, req, res, next) => {
-            this.sendErrorResponse(res, err)
-        })
+            this.sendErrorResponse(res, err);
+        });
 
         // Set router
-        this.router = router
+        this.router = router;
     }
 
     /**
@@ -235,28 +235,28 @@ class Server {
      */
     sendResponse = (res, opt = {}) => {
         // Get response mapper
-        const {ResponseMapper} = this.components
+        const { ResponseMapper } = this.components;
 
         // Deconstruct options
-        const {code, message, data} = opt
+        const { code, message, data } = opt;
 
         /** @type {Response} */
-        let resp
+        let resp;
 
         if (code) {
             // If code is set, get response code
-            resp = ResponseMapper.get(code, {success: true})
+            resp = ResponseMapper.get(code, { success: true });
         } else {
             // Else, get a generic success
-            resp = ResponseMapper.getSuccess()
+            resp = ResponseMapper.getSuccess();
         }
 
         // Compose response
-        const body = resp.compose({message, data})
+        const body = resp.compose({ message, data });
 
         // Send response
-        res.json(body)
-    }
+        res.json(body);
+    };
 
     /**
      * Send error response
@@ -266,16 +266,16 @@ class Server {
      */
     sendErrorResponse = (res, err) => {
         // Get response mapper
-        const {ResponseMapper} = this.components
+        const { ResponseMapper } = this.components;
 
         /** @type {Response} */
-        let resp
+        let resp;
         /** @type {*} */
-        let data
+        let data;
 
         // If error is not APIError, convert to Internal Error
         if (err.constructor.name !== "APIError") {
-            resp = ResponseMapper.getInternalError()
+            resp = ResponseMapper.getInternalError();
 
             // If debug mode, add source error stack
             if (this.config.server.debug) {
@@ -283,24 +283,22 @@ class Server {
                     _errorDebug: {
                         name: err.name,
                         message: err.message,
-                        stack: err.stack
-                    }
-                }
+                        stack: err.stack,
+                    },
+                };
             }
 
-            this.logger.error(err.stack, {scope: 'Server'})
+            this.logger.error(err.stack, { scope: "Server" });
         } else {
-            resp = ResponseMapper.get(err.code)
+            resp = ResponseMapper.get(err.code);
         }
 
         // Compose body
-        const body = resp.compose({data, message: err.message})
+        const body = resp.compose({ data, message: err.message });
 
         // Send response
-        res
-            .status(resp.status)
-            .json(body)
-    }
+        res.status(resp.status).json(body);
+    };
 
     /**
      * Wraps a Promised-based handler function and returns an express handler
@@ -308,16 +306,16 @@ class Server {
      * @param handlerFn
      * @returns {function(...[*]=)}
      */
-    handleAsync = handlerFn => {
+    handleAsync = (handlerFn) => {
         // Create function
         return async (req, res, next) => {
             try {
-                await handlerFn(req, res, next)
+                await handlerFn(req, res, next);
             } catch (err) {
-                this.sendErrorResponse(res, err)
+                this.sendErrorResponse(res, err);
             }
-        }
-    }
+        };
+    };
 
     /**
      * @typedef {Object} RESTHandlerResult
@@ -339,17 +337,17 @@ class Server {
      * @param {RESTHandlerFn} handlerFn
      * @returns {function(...[*]=)} Express handler function
      */
-    handleREST = handlerFn => {
+    handleREST = (handlerFn) => {
         // Create function
         return (req, res) => {
             try {
-                const result = handlerFn(req)
-                this.sendResponse(res, result)
+                const result = handlerFn(req);
+                this.sendResponse(res, result);
             } catch (err) {
-                this.sendErrorResponse(res, err)
+                this.sendErrorResponse(res, err);
             }
-        }
-    }
+        };
+    };
 
     /**
      * Async REST Handler function
@@ -365,27 +363,30 @@ class Server {
      * @param {RESTHandlerAsyncFn} handlerFn
      * @returns {function(...[*]=)} Express handler function
      */
-    handleRESTAsync = handlerFn => {
+    handleRESTAsync = (handlerFn) => {
         // Create function
         return async (req, res) => {
             try {
-                const result = await handlerFn(req)
-                this.sendResponse(res, result)
+                const result = await handlerFn(req);
+                this.sendResponse(res, result);
             } catch (err) {
-                this.sendErrorResponse(res, err)
+                this.sendErrorResponse(res, err);
             }
-        }
-    }
+        };
+    };
 
     /**
      * Start listening to request
      */
     start() {
-        const port = this.config.server.port
+        const port = this.config.server.port;
         this.router.listen(port, () => {
-            this.logger.info(`${AppManifest.AppName} v${AppManifest.AppVersion} Server started. Listening on port: ${port}`, {scope: 'Server'})
-        })
+            this.logger.info(
+                `${AppManifest.AppName} v${AppManifest.AppVersion} Server started. Listening on port: ${port}`,
+                { scope: "Server" }
+            );
+        });
     }
 }
 
-module.exports = Server
+module.exports = Server;
